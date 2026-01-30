@@ -4,3 +4,27 @@
   <option value="https://raw.githubusercontent.com">V/Line</option>
   <option value="https://raw.githubusercontent.com">SPE WPP</option>
 </select>
+document.getElementById('route-picker').addEventListener('change', function(e) {
+    const rawUrl = e.target.value;
+    if (!rawUrl) return;
+
+    // Fetch the data from GitHub
+    fetch(rawUrl)
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
+        .then(geojsonData => {
+            // Clear the old line before drawing the new one
+            if (currentRouteLayer) map.removeLayer(currentRouteLayer);
+
+            // Add the new GitHub route to the map
+            currentRouteLayer = L.geoJSON(geojsonData, {
+                style: { color: '#ff7800', weight: 5, opacity: 0.65 }
+            }).addTo(map);
+
+            // Zoom to fit the new route
+            map.fitBounds(currentRouteLayer.getBounds());
+        })
+        .catch(error => console.error('Error loading the GitHub file:', error));
+});
