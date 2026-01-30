@@ -1,6 +1,110 @@
-<select id="route-picker">
-  <option value="">-- Choose a Route --</option>
-  https://raw.githubusercontent.com/BozzyBus/BozzyBus/refs/heads/V/Line/VLine%20Southern%20Cross%20towards%20Geelong%20(Base).kml
-  <option value="https://raw.githubusercontent.com">V/Line</option>
-  <option value="https://raw.githubusercontent.com">SPE WPP</option>
-</select>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BozzyBus Route Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <!-- 1. Leaflet Styles and Engine -->
+    <link rel="stylesheet" href="https://unpkg.com" />
+    <script src="https://unpkg.com"></script>
+
+    <!-- 2. KML Parser Plugin (Required to read your .kml link) -->
+    <script src="https://cdnjs.cloudflare.com"></script>
+
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100vw; z-index: 1; }
+        
+        #menu-container {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 1000;
+            background: white;
+            padding: 12px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            width: 250px;
+        }
+
+        select { 
+            width: 100%; 
+            padding: 8px; 
+            font-size: 16px; 
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        h3 { margin: 0 0 10px 0; font-family: sans-serif; font-size: 18px; color: #333; }
+    </style>
+</head>
+<body>
+
+    <div id="menu-container">
+        <h3>BozzyBus Routes</h3>
+        <select id="route-picker">
+            <option value="">-- Select a Route --</option>
+            <https://raw.githubusercontent.com/BozzyBus/BozzyBus/refs/heads/V/Line/VLine%20Southern%20Cross%20towards%20Geelong%20(Base).kml>
+            <option value="https://raw.githubusercontent.com">VLine: Southern Cross to Geelong</option>
+        </select>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        // 1. Initialize Map on Australia (Geelong area)
+        const map = L.map('map').setView([-38.1499, 144.3617], 10);
+
+        // 2. Add OpenStreetMap Tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let currentRouteLayer;
+
+        // 3. Logic to Load and Parse KML
+        document.getElementById('route-picker').addEventListener('change', function(e) {
+            const kmlUrl = e.target.value;
+            if (!kmlUrl) return;
+
+            // Remove previous route if one exists
+            if (currentRouteLayer) map.removeLayer(currentRouteLayer);
+
+            fetch(kmlUrl)
+                .then(res => res.text())
+                .then(kmlText => {
+                    const parser = new DOMParser();
+                    const kmlDom = parser.parseFromString(kmlText, 'text/xml');
+                    
+                    // Use the KML plugin to draw the route
+                    currentRouteLayer = new L.KML(kmlDom);
+                    map.addLayer(currentRouteLayer);
+
+                    // Zoom the map to fit the VLine route
+                    const bounds = currentRouteLayer.getBounds();
+                    if (bounds.isValid()) {
+                        map.fitBounds(bounds);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Could not load route. Make sure the GitHub link is 'Raw'.");
+                });
+        });
+
+        // 4. Follow User Location
+        map.locate({watch: true, setView: false});
+        
+        const userMarker = L.marker([0,0]).addTo(map).bindPopup("You are here");
+
+        map.on('locationfound', function(e) {
+            userMarker.setLatLng(e.latlng);
+        });
+
+        map.on('locationerror', function() {
+            console.log("Location access denied.");
+        });
+    </script>
+</body>
+</html>
